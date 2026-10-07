@@ -1,12 +1,9 @@
 name: Project_Testing
 
 on:
-  schedule:
-    - cron: 0 0 * * 4    
+  #schedule:
+  #  - cron: 0 0 * * 4    
   workflow_dispatch: 
-  push:
-    branches:
-      - main
   pull_request:
     types: [opened]
     branches:
