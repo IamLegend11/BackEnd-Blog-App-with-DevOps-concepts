@@ -1,6 +1,6 @@
 services:
   backend:
-    build: .
+    image: iamlegend194/blog_app:${IMAGE_TAG} 
     container_name: my_backend
     restart: always
     ports:
