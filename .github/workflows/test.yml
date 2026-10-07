@@ -54,20 +54,35 @@ jobs:
           -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:latest .
       - name: Push Image to DockerHub
         run: docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:${{ env.IMG_TAG }}
+      - name: Upload Compose File
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-file
+          path: docker-compose.yml
 
   Deploy_phase:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     needs: Build_phase
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-      - name: Login to DockerHub
-        uses: docker/login-action@v4.6.0
+      - name: Download Compose File
+        uses: actions/download-artifact@v5
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASS }}
-
+          name: compose-file
+    #  - name: Login to DockerHub
+    #    uses: docker/login-action@v4.6.0
+    #    with:
+    #      username: ${{ secrets.DOCKER_USERNAME }}
+    #      password: ${{ secrets.DOCKER_PASS }}
+      - name: Copy Docker Compose File
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ec2-user
+          key: ${{ secrets.SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "/home/ec2-user/"
+        
       - name: Connecting to EC2
         uses: appleboy/ssh-action@v1
         with:
@@ -75,13 +90,17 @@ jobs:
           username: ec2-user
           key: ${{ secrets.SSH_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:${{ env.IMG_TAG }}
-            docker stop ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:${{ env.IMG_TAG }} || true
-            docker rm ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:${{ env.IMG_TAG }} || true
-            docker run -d \
-            -p 3001:3001 \
-            --name ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:${{ env.IMG_TAG }} \
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:${{ env.IMG_TAG }}
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose down
+            docker compose up -d
+        #    docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:${{ env.IMG_TAG }}
+        #    docker stop ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:${{ env.IMG_TAG }} || true
+        #    docker rm ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:${{ env.IMG_TAG }} || true
+        #    docker run -d \
+        #    -p 3001:3001 \
+        #    --name ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:${{ env.IMG_TAG }} \
+        #    ${{ secrets.DOCKER_USERNAME }}/${{ env.IMG_NAME }}:${{ env.IMG_TAG }}
       - name: Testing Server Response
         run: |
           sleep 3
