@@ -3,6 +3,7 @@ name: Project_Testing
 on:
   schedule:
     - cron: 0 0 * * 4    
+  workflow_dispatch: 
   push:
     branches:
       - main
@@ -14,7 +15,7 @@ on:
 permissions:
   contents: read
 env:
-  IMG_NAME: Blog_App
+  IMG_NAME: blog_app
   IMG_TAG: ${{ github.sha }}
 
   
